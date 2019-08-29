@@ -332,46 +332,40 @@ $(document).ready(function () {
 <div id="fetching-and-reading-the-initial-dataset" class="section level2">
 <h2>Fetching And Reading The Initial Dataset</h2>
 <p>The data source used is in <code>en_US/en_US.blogs.txt</code>. Reading the first 5 lines of the file</p>
-<pre class="r"><code>filename &lt;- &quot;en_US.blogs.txt&quot;
-readFile &lt;- function(filename, numLines=5, con=NULL) {
-    folder &lt;- &quot;final/en_US/&quot;
+<pre class="r"><code>readFile &lt;- function(filename, numLines=5, con=NULL, rootFolder=&quot;final/en_US/&quot;) {
     if (is.null(con))
-        con &lt;- file(paste0(folder, filename), &quot;r&quot;)
+        con &lt;- file(paste0(rootFolder, filename), &quot;r&quot;)
     lines &lt;- readLines(con, numLines)
     list(connection=con, lines=lines)
 }
-ret &lt;- readFile(filename)
-con &lt;- ret[[&quot;connection&quot;]]
-lines &lt;- ret[[&quot;lines&quot;]]
-close(con)
-lines</code></pre>
+
+ret &lt;- readFile(&quot;en_US.blogs.txt&quot;)
+close(ret$connection)
+ret$lines</code></pre>
 <pre><code>[1] &quot;In the years thereafter, most of the Oil fields and platforms were named after pagan “gods”.&quot;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
 [2] &quot;We love you Mr. Brown.&quot;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
 [3] &quot;Chad has been awesome with the kids and holding down the fort while I work later than usual! The kids have been busy together playing Skylander on the XBox together, after Kyan cashed in his $$$ from his piggy bank. He wanted that game so bad and used his gift card from his birthday he has been saving and the money to get it (he never taps into that thing either, that is how we know he wanted it so bad). We made him count all of his money to make sure that he had enough! It was very cute to watch his reaction when he realized he did! He also does a very good job of letting Lola feel like she is playing too, by letting her switch out the characters! She loves it almost as much as him.&quot;
 [4] &quot;so anyways, i am going to share some home decor inspiration that i have been storing in my folder on the puter. i have all these amazing images stored away ready to come to life when we get our home.&quot;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
 [5] &quot;With graduation season right around the corner, Nancy has whipped up a fun set to help you out with not only your graduation cards and gifts, but any occasion that brings on a change in one's life. I stamped the images in Memento Tuxedo Black and cut them out with circle Nestabilities. I embossed the kraft and red cardstock with TE's new Stars Impressions Plate, which is double sided and gives you 2 fantastic patterns. You can see how to use the Impressions Plates in this tutorial Taylor created. Just one pass through your die cut machine using the Embossing Pad Kit is all you need to do - super easy!&quot;                                                                                    </code></pre>
-<p>Reading the Twitter data source and counting the number of lines</p>
-<pre class="r"><code>filename &lt;- &quot;en_US.twitter.txt&quot;
-ret &lt;- readFile(filename, 100)
-lines &lt;- ret[[&quot;lines&quot;]]
-con &lt;- ret[[&quot;connection&quot;]]
-counter &lt;- length(lines)
-while (length(lines) == 100) {
-    ret &lt;- readFile(filename, 100, con)
-    lines &lt;- ret[[&quot;lines&quot;]]
-    counter &lt;- counter + length(lines)
+<p>A function to assist with the next assignments. It receives a filename, a search function, an initial value, and the number of records to read. It searches the file in filename using the search function, reading nrec records at a time. The initial value is an accumlator for the search process, with a list of values.</p>
+<pre class="r"><code>checkLines &lt;- function(filename, search_function, initial_value=NULL, nrec=1000) {
+    ret &lt;- readFile(filename, nrec)
+    result &lt;- search_function(ret$lines, initial_value)
+    while (length(ret$lines) == nrec) {
+        ret &lt;- readFile(filename, nrec, ret$connection)
+        result &lt;- search_function(ret$lines, result)
+    }
+    close(ret$connection)
+    result
 }</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 55 appears to contain an embedded
-nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 47 appears to contain an embedded
-nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 86 appears to contain an embedded
-nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 32 appears to contain an embedded
-nul</code></pre>
-<pre class="r"><code>close(ret[[&quot;connection&quot;]])
-counter</code></pre>
-<pre><code>[1] 2360148</code></pre>
+<p>Reading the Twitter data source and counting the number of lines</p>
+<pre class="r"><code>countLines &lt;- function(lines, result) {
+    list(counter=result$counter + length(lines))
+}
+
+checkLines(&quot;en_US.twitter.txt&quot;, countLines, list(counter=0))</code></pre>
+<pre><code>$counter
+[1] 2360148</code></pre>
 <p>Checking the longest line in all en_US files</p>
 <pre class="r"><code>library(stringr)
 
@@ -379,77 +373,40 @@ lineLengths &lt;- function(lines) {
     sapply(lines, function(line) {str_length(line)})
 }
 
-maxLine &lt;- function(lines, longestLine, filename) {
-    currentmax &lt;- longestLine[[&quot;length&quot;]]
-    maxlen &lt;- max(lineLengths(lines), currentmax)
-    if (maxlen &gt; currentmax) {
-        list(length=maxlen, filename=filename)
-    } else {
-        longestLine
+maxLineInFile &lt;- function(filename) {
+    
+    function(lines, result) {
+        currentmax &lt;- result$length
+        maxlen &lt;- max(lineLengths(lines), currentmax)
+        if (maxlen &gt; currentmax) {
+            list(length=maxlen, filename=filename)
+        } else {
+            result
+        }
     }
 }
 
-nrec &lt;- 1000
 files &lt;- list.files(&quot;final/en_US/&quot;)
-longestLine &lt;- list(length=0, filename=&quot;&quot;)
+result &lt;- list(length=0, filename=&quot;&quot;)
 for (filename in files) {
-    ret &lt;- readFile(filename, nrec)
-    lines &lt;- ret[[&quot;lines&quot;]]
-    con &lt;- ret[[&quot;connection&quot;]]
-    longestLine &lt;- maxLine(lines, longestLine, filename)
-    while (length(lines) == nrec) {
-        ret &lt;- readFile(filename, nrec, con)
-        lines &lt;- ret[[&quot;lines&quot;]]
-        longestLine &lt;- maxLine(lines, longestLine, filename)
-    }
-    close(ret[[&quot;connection&quot;]])
-}</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 155 appears to contain an
-embedded nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 547 appears to contain an
-embedded nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 86 appears to contain an embedded
-nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 32 appears to contain an embedded
-nul</code></pre>
-<pre class="r"><code>longestLine</code></pre>
+    result &lt;- checkLines(filename, maxLineInFile(filename), result)
+}
+
+result</code></pre>
 <pre><code>$length
 [1] 40833
 
 $filename
 [1] &quot;en_US.blogs.txt&quot;</code></pre>
-<p>A function to assist with the next assignments</p>
-<pre class="r"><code>checkLines &lt;- function(filename, search_function, initial_value=NULL) {
-    nrec &lt;- 1000
-    ret &lt;- readFile(filename, nrec)
-    lines &lt;- ret[[&quot;lines&quot;]]
-    con &lt;- ret[[&quot;connection&quot;]]
-    result &lt;- search_function(lines, initial_value)
-    while (length(lines) == nrec) {
-        ret &lt;- readFile(filename, nrec, con)
-        lines &lt;- ret[[&quot;lines&quot;]]
-        result &lt;- search_function(lines, result)
-    }
-    close(ret[[&quot;connection&quot;]])
-    result
-}</code></pre>
 <p>Checking the occurrences of the words <code>love</code> and <code>hate</code> in the Twitter dataset</p>
 <pre class="r"><code>addLoveAndHate &lt;- function(lines, result) {
     love &lt;- sum(grepl(&quot; love &quot;, lines))
     hate &lt;- sum(grepl(&quot; hate &quot;, lines))
-    list(love=result[[&quot;love&quot;]] + love, hate=result[[&quot;hate&quot;]] + hate)
+    list(love=result$love + love, hate=result$hate + hate)
 }
 
-result &lt;- checkLines(&quot;en_US.twitter.txt&quot;, addLoveAndHate, list(love=0, hate=0))</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 155 appears to contain an
-embedded nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 547 appears to contain an
-embedded nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 86 appears to contain an embedded
-nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 32 appears to contain an embedded
-nul</code></pre>
-<pre class="r"><code>result[[&quot;love&quot;]] / result[[&quot;hate&quot;]]</code></pre>
+result &lt;- checkLines(&quot;en_US.twitter.txt&quot;, addLoveAndHate, list(love=0, hate=0))
+result$love / result$hate</code></pre>
 <pre><code>[1] 4.616849</code></pre>
 <p>Checking the tweet that match the word <code>biostats</code></p>
 <pre class="r"><code>checkBiostats &lt;- function(lines, result) {
@@ -461,14 +418,6 @@ nul</code></pre>
 }
 
 checkLines(&quot;en_US.twitter.txt&quot;, checkBiostats, list(line=&quot;&quot;))</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 155 appears to contain an
-embedded nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 547 appears to contain an
-embedded nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 86 appears to contain an embedded
-nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 32 appears to contain an embedded
-nul</code></pre>
 <pre><code>$line
 [1] &quot;i know how you feel.. i have biostats on tuesday and i have yet to study =/&quot;</code></pre>
 <p>Matching the sentence <em>A computer once beat me at chess, but it was no match for me at kickboxing</em></p>
@@ -476,18 +425,10 @@ nul</code></pre>
 
 checkSentence &lt;- function(lines, result) {
     lineNumber &lt;- grepl(sentence, lines)
-    list(count=result[[&quot;count&quot;]] + sum(lineNumber))
+    list(count=result$count + sum(lineNumber))
 }
 
 checkLines(&quot;en_US.twitter.txt&quot;, checkSentence, list(count=0))</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 155 appears to contain an
-embedded nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 547 appears to contain an
-embedded nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 86 appears to contain an embedded
-nul</code></pre>
-<pre><code>Warning in readLines(con, numLines): line 32 appears to contain an embedded
-nul</code></pre>
 <pre><code>$count
 [1] 3</code></pre>
 </div>

@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, comment="")
+knitr::opts_chunk$set(echo = TRUE, comment="", warning=FALSE)
 ```
 
 ## SwiftKey And NLP
@@ -26,35 +26,42 @@ This is the capstone project from Johns Hopkins' Data Science Specialization. Th
 
 The data source used is in `en_US/en_US.blogs.txt`. Reading the first 5 lines of the file
 ```{r data_fetch, comment=""}
-filename <- "en_US.blogs.txt"
-readFile <- function(filename, numLines=5, con=NULL) {
-    folder <- "final/en_US/"
+
+readFile <- function(filename, numLines=5, con=NULL, rootFolder="final/en_US/") {
     if (is.null(con))
-        con <- file(paste0(folder, filename), "r")
+        con <- file(paste0(rootFolder, filename), "r")
     lines <- readLines(con, numLines)
     list(connection=con, lines=lines)
 }
-ret <- readFile(filename)
-con <- ret[["connection"]]
-lines <- ret[["lines"]]
-close(con)
-lines
+
+ret <- readFile("en_US.blogs.txt")
+close(ret$connection)
+ret$lines
+```
+
+A function to assist with the next assignments. It receives a filename, a search function, an initial value, and the number of records to read. It searches the file in filename using the search function, reading nrec records at a time. The initial value is an accumlator for the search process, with a list of values.
+```{r}
+
+checkLines <- function(filename, search_function, initial_value=NULL, nrec=1000) {
+    ret <- readFile(filename, nrec)
+    result <- search_function(ret$lines, initial_value)
+    while (length(ret$lines) == nrec) {
+        ret <- readFile(filename, nrec, ret$connection)
+        result <- search_function(ret$lines, result)
+    }
+    close(ret$connection)
+    result
+}
 ```
 
 Reading the Twitter data source and counting the number of lines
 ```{r twitter, comment=""}
-filename <- "en_US.twitter.txt"
-ret <- readFile(filename, 100)
-lines <- ret[["lines"]]
-con <- ret[["connection"]]
-counter <- length(lines)
-while (length(lines) == 100) {
-    ret <- readFile(filename, 100, con)
-    lines <- ret[["lines"]]
-    counter <- counter + length(lines)
+
+countLines <- function(lines, result) {
+    list(counter=result$counter + length(lines))
 }
-close(ret[["connection"]])
-counter
+
+checkLines("en_US.twitter.txt", countLines, list(counter=0))
 ```
 
 Checking the longest line in all en_US files
@@ -65,49 +72,26 @@ lineLengths <- function(lines) {
     sapply(lines, function(line) {str_length(line)})
 }
 
-maxLine <- function(lines, longestLine, filename) {
-    currentmax <- longestLine[["length"]]
-    maxlen <- max(lineLengths(lines), currentmax)
-    if (maxlen > currentmax) {
-        list(length=maxlen, filename=filename)
-    } else {
-        longestLine
+maxLineInFile <- function(filename) {
+    
+    function(lines, result) {
+        currentmax <- result$length
+        maxlen <- max(lineLengths(lines), currentmax)
+        if (maxlen > currentmax) {
+            list(length=maxlen, filename=filename)
+        } else {
+            result
+        }
     }
 }
 
-nrec <- 1000
 files <- list.files("final/en_US/")
-longestLine <- list(length=0, filename="")
+result <- list(length=0, filename="")
 for (filename in files) {
-    ret <- readFile(filename, nrec)
-    lines <- ret[["lines"]]
-    con <- ret[["connection"]]
-    longestLine <- maxLine(lines, longestLine, filename)
-    while (length(lines) == nrec) {
-        ret <- readFile(filename, nrec, con)
-        lines <- ret[["lines"]]
-        longestLine <- maxLine(lines, longestLine, filename)
-    }
-    close(ret[["connection"]])
+    result <- checkLines(filename, maxLineInFile(filename), result)
 }
-longestLine
-```
-A function to assist with the next assignments
-```{r}
-checkLines <- function(filename, search_function, initial_value=NULL) {
-    nrec <- 1000
-    ret <- readFile(filename, nrec)
-    lines <- ret[["lines"]]
-    con <- ret[["connection"]]
-    result <- search_function(lines, initial_value)
-    while (length(lines) == nrec) {
-        ret <- readFile(filename, nrec, con)
-        lines <- ret[["lines"]]
-        result <- search_function(lines, result)
-    }
-    close(ret[["connection"]])
-    result
-}
+
+result
 ```
 
 Checking the occurrences of the words `love` and `hate` in the Twitter dataset
@@ -116,15 +100,16 @@ Checking the occurrences of the words `love` and `hate` in the Twitter dataset
 addLoveAndHate <- function(lines, result) {
     love <- sum(grepl(" love ", lines))
     hate <- sum(grepl(" hate ", lines))
-    list(love=result[["love"]] + love, hate=result[["hate"]] + hate)
+    list(love=result$love + love, hate=result$hate + hate)
 }
 
 result <- checkLines("en_US.twitter.txt", addLoveAndHate, list(love=0, hate=0))
-result[["love"]] / result[["hate"]]
+result$love / result$hate
 ```
 
 Checking the tweet that match the word `biostats`
 ```{r biostats}
+
 checkBiostats <- function(lines, result) {
     lineNumber <- grep(" biostats ", lines)
     if (length(lineNumber) > 0)
@@ -138,11 +123,12 @@ checkLines("en_US.twitter.txt", checkBiostats, list(line=""))
 
 Matching the sentence *A computer once beat me at chess, but it was no match for me at kickboxing*
 ```{r sentence}
+
 sentence <- "A computer once beat me at chess, but it was no match for me at kickboxing"
 
 checkSentence <- function(lines, result) {
     lineNumber <- grepl(sentence, lines)
-    list(count=result[["count"]] + sum(lineNumber))
+    list(count=result$count + sum(lineNumber))
 }
 
 checkLines("en_US.twitter.txt", checkSentence, list(count=0))
