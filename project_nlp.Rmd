@@ -1,0 +1,114 @@
+---
+title: "Capstone Project - NLP"
+author: "Gus Garcia"
+date: "29 August 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Switkey And NLP
+
+This is the capstone project from Johns Hopkins' Data Science Specialization. The project consists of using NLP to analyse text from different data sources.
+
+## Initial Questions To Consider
+
+* What do the data look like?
+* Where do the data come from?
+* Can you think of any other data sources that might help you in this project?
+* What are the common steps in natural language processing?
+* What are some common issues in the analysis of text data?
+* What is the relationship between NLP and the concepts you have learned in the Specialization?
+
+## Fetching And Reading The Initial Dataset
+
+The data source used is in `en_US/en_US.blogs.txt`. Reading the first 5 lines of the file
+```{r data_fetch, comment=""}
+filename <- "en_US.blogs.txt"
+readFile <- function(filename, numLines=5, con=NULL) {
+    folder <- "final/en_US/"
+    if (is.null(con))
+        con <- file(paste0(folder, filename), "r")
+    lines <- readLines(con, numLines)
+    list(connection=con, lines=lines)
+}
+ret <- readFile(filename)
+con <- ret[["connection"]]
+lines <- ret[["lines"]]
+close(con)
+lines
+```
+
+Reading the Twitter data source and counting the number of lines
+```{r twitter, comment=""}
+filename <- "en_US.twitter.txt"
+ret <- readFile(filename, 100)
+lines <- ret[["lines"]]
+con <- ret[["connection"]]
+counter <- length(lines)
+while (length(lines) == 100) {
+    ret <- readFile(filename, 100, con)
+    lines <- ret[["lines"]]
+    counter <- counter + length(lines)
+}
+close(ret[["connection"]])
+counter
+```
+
+Checking the longest line in all en_US files
+```{r}
+library(stringr)
+
+lineLengths <- function(lines) {
+    sapply(lines, function(line) {str_length(line)})
+}
+
+maxLine <- function(lines, longestLine, filename) {
+    currentmax <- longestLine[["length"]]
+    maxlen <- max(lineLengths(lines), currentmax)
+    if (maxlen > currentmax) {
+        list(length=maxlen, filename=filename)
+    } else {
+        longestLine
+    }
+}
+
+nrec <- 1000
+files <- list.files("final/en_US/")
+longestLine <- list(length=0, filename="")
+for (filename in files) {
+    ret <- readFile(filename, nrec)
+    lines <- ret[["lines"]]
+    con <- ret[["connection"]]
+    longestLine <- maxLine(lines, longestLine, filename)
+    while (length(lines) == nrec) {
+        ret <- readFile(filename, nrec, con)
+        lines <- ret[["lines"]]
+        longestLine <- maxLine(lines, longestLine, filename)
+    }
+    close(ret[["connection"]])
+}
+longestLine
+```
+
+Checking the occurrences of the words `love` and `hate` in the Twitter dataset
+```{r love_and_hate, comment=""}
+nrec <- 1000
+nlove <- 0
+nhate <- 0
+ret <- readFile(filename, nrec)
+lines <- ret[["lines"]]
+con <- ret[["connection"]]
+longestLine <- maxLine(lines, longestLine, filename)
+while (length(lines) == nrec) {
+    ret <- readFile(filename, nrec, con)
+    lines <- ret[["lines"]]
+    longestLine <- maxLine(lines, longestLine, filename)
+}
+close(ret[["connection"]])
+
+nlove/nhate
+```
+## Tokenization and Profanity Removal
