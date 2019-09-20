@@ -1,0 +1,84 @@
+---
+title: "Capstone Project - Describing the SwiftKey Challenge"
+author: "Gus Garcia"
+date: "30 September 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment="", warning=FALSE)
+```
+
+## Abstract
+
+The capstone project for the Data Science Specialization is a predictive algorithm similar to that developed by SwiftKey, which powers Android smart phones. This algorithm can suggest the next word or words after the user has typed the first one.
+
+This document explains major features of the data identified in the English dataset provided as a input data for the app, and briefly summarizes the plans for creating the prediction algorithm and Shiny app for a technical and non-technical audience. 
+
+### Questions To Consider
+* How can you efficiently store an n-gram model (think Markov Chains)?
+* How can you use the knowledge about word frequencies to make your model smaller and more efficient?
+* How many parameters do you need (i.e. how big is n in your n-gram model)?
+* Can you think of simple ways to "smooth" the probabilities (think about giving all n-grams a non-zero probability even if they aren't observed in the data) ?
+* How do you evaluate whether your model is any good?
+* How can you use backoff models to estimate the probability of unobserved n-grams?
+
+## Initial Exploratory Data Analysis (EDA)
+
+The dataset for this initial EDA is the English dataset. For other languages, there is some degree of uncertainty around the fitness of the algorithm without any modification, due to linguistic differences. This should be considered in the future stages of the app. Files included are:
+
+1. en_US.blogs.txt  
+2. en_US.news.txt  
+3. en_US.twitter.txt  
+
+```{r datasets}
+dataFolder <- "final/en_US"
+blogs <- "en_US.blogs.txt"
+news <- "en_US.news.txt"
+twitter <- "en_US.twitter.txt"
+enUsDatasets <- c(blogs, news, twitter)
+```
+
+The main goal is to understand the data and display some basic understading - and possible insights - towards the creation of a prediction algorithm that can be used in the finall data product, namely, a web app hosted on [shinyapp.io](https://shinyapp.io), otherwise know as ShinyApp.
+
+### Counting the Number of Lines in Each Dataset
+
+The initial statistic from the files is the number of lines on each of them, along with the nubmer of words. This introduces the magnitude of the dataset and provides information towards space and memory allocation. The app should be able to predict sequences of words in a timely manner (less than 1 second).
+
+The code below optimizes the reading of the files. It reads the file by chuncks, avoiding memory congestion.
+```{r readFile}
+
+readFile <- function(filename, numLines=5, con=NULL, rootFolder="final/en_US/") {
+    if (is.null(con))
+        con <- file(paste0(rootFolder, filename), "r")
+    lines <- readLines(con, numLines)
+    list(connection=con, lines=lines)
+}
+```
+
+A function to assist with the next assignments. It receives a filename, a search function, an initial value, and the number of records to read. It searches the file in filename using the search function, reading nrec records at a time. The initial value is an accumlator for the search process, with a list of values.
+```{r checkLines, comment=""}
+
+checkLines <- function(filename, search_function, initial_value=NULL, nrec=1000) {
+    ret <- readFile(filename, nrec)
+    result <- search_function(ret$lines, initial_value)
+    while (length(ret$lines) == nrec) {
+        ret <- readFile(filename, nrec, ret$connection)
+        result <- search_function(ret$lines, result)
+    }
+    close(ret$connection)
+    result
+}
+```
+
+Reading the datasets source and counting the number of lines
+```{r count_lines, comment=""}
+
+countLines <- function(lines, result) {
+    list(counter=result$counter + length(lines))
+}
+
+for (fileName in enUsDatasets) {
+    print(checkLines(fileName, countLines, list(counter=0))$counter)
+}
+```
