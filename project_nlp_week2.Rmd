@@ -27,13 +27,27 @@ This document explains major features of the data identified in the English data
 
 The dataset for this initial EDA is the English dataset. For other languages, there is some degree of uncertainty around the fitness of the algorithm without any modification, due to linguistic differences. This should be considered in the future stages of the app. Files included are:
 
-1. en_US.blogs.txt  
-2. en_US.news.txt  
-3. en_US.twitter.txt  
+English           German            Finnish           Russian 
+----------------- ----------------- ----------------- ---------------
+en_US.blogs.txt   de_DE.blogs.txt   fi_FI.blogs.txt   ru_RU.blogs.txt
+en_US.news.txt    de_DE.news.txt    fi_FI.news.txt    ru_RU.news.txt
+en_US.twitter.txt de_DE.twitter.txt fi_FI.twitter.txt ru_RU.twitter.txt
 
 ```{r datasets, echo=F}
 dataFolder <- "final/en_US"
-enUsDatasets <- c("en_US.blogs.txt", "en_US.news.txt", "en_US.twitter.txt")
+datasets <- list()
+datasets$languages <- c("en_US", "de_DE", "fi_FI", "ru_RU")
+datasets$sources <- c("blogs", "news", "twitter")
+
+dt <- matrix(nrow = 3, ncol = 1)
+for (lang in datasets$languages) {
+    col <- c()
+    for (src in datasets$sources) {
+        col <- c(col, paste(lang, src, 'txt', sep = '.'))
+    }
+    dt <- cbind(dt, col)
+}
+dt <- dt[1:3, 2:5]
 ```
 
 The main goal of this report is to understand the data and display some basic understading - and possible insights - towards the creation of a prediction algorithm that can be used in the finall data product, namely, a web app hosted on [shinyapp.io](https://shinyapp.io), otherwise know as ShinyApp.
@@ -81,9 +95,23 @@ plot_info <- function(dataset, total) {
 
 ```
 
-```{r plot_lines_words, cache=TRUE}
-plot_info(enUsDatasets, read_datasets(enUsDatasets, counter))
+```{r english, cache=TRUE}
+plot_info(dt[,1], read_datasets(dt[,1], counter))
 ```
+
+
+```{r german, cache=TRUE}
+plot_info(dt[,2], read_datasets(dt[,2], counter))
+```
+
+```{r finnish, cache=TRUE}
+plot_info(dt[,3], read_datasets(dt[,3], counter))
+```
+
+```{r russian, cache=TRUE}
+plot_info(dt[,4], read_datasets(dt[,4], counter))
+```
+
 
 ## Creating N-Grams
 

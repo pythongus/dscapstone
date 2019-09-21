@@ -4,9 +4,10 @@
 # connection object and root folder. Returns a connection and the 
 # number of lines read from filename, given the chunk numLines.
 # The files are located in rootFolder.
-readFile <- function(filename, numLines=5, con=NULL, rootFolder="final/en_US/") {
+readFile <- function(filename, numLines=5, con=NULL, rootFolder="final") {
+    folder <- paste(rootFolder, str_split(filename, "\\.")[[1]][1], sep = .Platform$file.sep)
     if (is.null(con))
-        con <- file(paste0(rootFolder, filename), "r")
+        con <- file(paste(folder, filename, sep = .Platform$file.sep), "r")
     lines <- readLines(con, numLines)
     list(connection=con, lines=lines)
 }
