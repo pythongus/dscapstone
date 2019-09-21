@@ -53,9 +53,11 @@ source("dataset_tools.R")
 ### Reading the datasets and counting the number of lines and words
 
 The results are shown in the table below using the function `counter`
-```{r count_lines, comment=""}
+```{r echo=F}
 library(stringr)
+```
 
+```{r count_lines, comment=""}
 counter <- function(lines, result) {
     nwords <- sum(unlist(str_split(lines, " ")) != "")
     nlines <- length(lines)
@@ -65,10 +67,12 @@ counter <- function(lines, result) {
 
 #### Plots for lines and words
 
-```{r plot_info_function}
+```{r echo=F}
 library(ggplot2)
 library(gridExtra)
+```
 
+```{r plot_info_function}
 plot_info <- function(dataset, total) {
     pl <- plot_total(dataset, total$lines, "Line")
     pw <- plot_total(dataset, total$words, "Word")
@@ -80,6 +84,7 @@ plot_info <- function(dataset, total) {
 ```{r plot_lines_words, cache=TRUE}
 plot_info(enUsDatasets, read_datasets(enUsDatasets, counter))
 ```
+
 ## Creating N-Grams
 
 The n-grams will be used to feed the prediction algorithm in the next stages for known and unknown sequences of words. The basic statistics for 2-gram and 3-gram from the four languages are shown below.

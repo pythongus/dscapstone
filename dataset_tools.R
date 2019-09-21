@@ -1,5 +1,9 @@
 # Library with functions to read the datasets
 
+# Receives the filename, the chunck size numLines, with an optional
+# connection object and root folder. Returns a connection and the 
+# number of lines read from filename, given the chunk numLines.
+# The files are located in rootFolder.
 readFile <- function(filename, numLines=5, con=NULL, rootFolder="final/en_US/") {
     if (is.null(con))
         con <- file(paste0(rootFolder, filename), "r")
@@ -7,6 +11,9 @@ readFile <- function(filename, numLines=5, con=NULL, rootFolder="final/en_US/") 
     list(connection=con, lines=lines)
 }
 
+# Receives a filename, a search function, an initial value, and
+# the number of records to read. Returns the result of the search function,
+# considering the initial values, after reading nrec lines from filename.
 checkLines <- function(filename, search_function, initial_value=NULL, nrec=1000) {
     ret <- readFile(filename, nrec)
     result <- search_function(ret$lines, initial_value)
@@ -18,6 +25,8 @@ checkLines <- function(filename, search_function, initial_value=NULL, nrec=1000)
     result
 }
 
+# Magnitude of the number, in terms of exponent of 10.
+# For example, 34 ~ 10 ^ 1, 342 ~ 10 ^ 2.
 mag10 <- function(number) {
     exp10 <- 0
     remainder <- number
@@ -28,18 +37,20 @@ mag10 <- function(number) {
     10 ^ exp10
 }
 
-read_datasets <- function(dataset, counter_function) {
+# Receives a dataset_files and a counter_function. Returns the total number
+# of lines and words in the dataset_files, per file.
+read_datasets <- function(dataset_files, counter_function) {
     total <- list(lines=c(), words=c())
-    for (fileName in dataset) {
-        count <- checkLines(fileName, counter_function, list(lines=0, words=0))
+    for (file_name in dataset_files) {
+        count <- checkLines(file_name, counter_function, list(lines=0, words=0))
         total$lines <- c(total$lines, count$lines)
         total$words <- c(total$words, count$words)
     }
     total
 }
 
-#Plots the total number of the given metric from the
-#datasets. Displays the language, in xx_XX format.
+# Plots the total number of the given metric from the
+# datasets. Displays the language, in xx_XX format.
 plot_total <- function(datasets, total, metric) {
     total_scaled <- round(total/1e6, 2)
     ynudge <- -.1 * mag10(max(total_scaled))
