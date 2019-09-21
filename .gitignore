@@ -1,4 +1,6 @@
 *.html
+*_cache/
+*_files/
 *.zip
 rsconnect/
 final/

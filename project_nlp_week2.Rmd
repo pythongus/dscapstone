@@ -31,54 +31,61 @@ The dataset for this initial EDA is the English dataset. For other languages, th
 2. en_US.news.txt  
 3. en_US.twitter.txt  
 
-```{r datasets}
+```{r datasets, echo=F}
 dataFolder <- "final/en_US"
-blogs <- "en_US.blogs.txt"
-news <- "en_US.news.txt"
-twitter <- "en_US.twitter.txt"
-enUsDatasets <- c(blogs, news, twitter)
+enUsDatasets <- c("en_US.blogs.txt", "en_US.news.txt", "en_US.twitter.txt")
 ```
 
-The main goal is to understand the data and display some basic understading - and possible insights - towards the creation of a prediction algorithm that can be used in the finall data product, namely, a web app hosted on [shinyapp.io](https://shinyapp.io), otherwise know as ShinyApp.
+The main goal of this report is to understand the data and display some basic understading - and possible insights - towards the creation of a prediction algorithm that can be used in the finall data product, namely, a web app hosted on [shinyapp.io](https://shinyapp.io), otherwise know as ShinyApp.
 
 ### Counting the Number of Lines in Each Dataset
 
-The initial statistic from the files is the number of lines on each of them, along with the nubmer of words. This introduces the magnitude of the dataset and provides information towards space and memory allocation. The app should be able to predict sequences of words in a timely manner (less than 1 second).
+The initial statistic from the files is the number of lines on each of them, along with the number of words. This introduces the magnitude of the dataset and provides information towards space and memory allocation. The app should be able to predict sequences of words in a timely manner (less than 1 second).
 
-The code below optimizes the reading of the files. It reads the file by chuncks, avoiding memory congestion.
-```{r readFile}
-
-readFile <- function(filename, numLines=5, con=NULL, rootFolder="final/en_US/") {
-    if (is.null(con))
-        con <- file(paste0(rootFolder, filename), "r")
-    lines <- readLines(con, numLines)
-    list(connection=con, lines=lines)
-}
+The functions in script `dataset_tools.R` below optimizes the reading of the files. It reads the file by chuncks, avoiding memory congestion.
+```{r}
+source("dataset_tools.R")
 ```
 
-A function to assist with the next assignments. It receives a filename, a search function, an initial value, and the number of records to read. It searches the file in filename using the search function, reading nrec records at a time. The initial value is an accumlator for the search process, with a list of values.
-```{r checkLines, comment=""}
 
-checkLines <- function(filename, search_function, initial_value=NULL, nrec=1000) {
-    ret <- readFile(filename, nrec)
-    result <- search_function(ret$lines, initial_value)
-    while (length(ret$lines) == nrec) {
-        ret <- readFile(filename, nrec, ret$connection)
-        result <- search_function(ret$lines, result)
-    }
-    close(ret$connection)
-    result
-}
-```
+`checkLines` is a function to assist with the specific tasks for this assingment. It receives a filename, a search function, an initial value, and the number of records to read. It searches the file in filename using the search function, reading nrec records at a time. The initial value is an accumlator for the search process, with a list of values.
 
-Reading the datasets source and counting the number of lines
+### Reading the datasets and counting the number of lines and words
+
+The results are shown in the table below using the function `counter`
 ```{r count_lines, comment=""}
+library(stringr)
 
-countLines <- function(lines, result) {
-    list(counter=result$counter + length(lines))
-}
-
-for (fileName in enUsDatasets) {
-    print(checkLines(fileName, countLines, list(counter=0))$counter)
+counter <- function(lines, result) {
+    nwords <- sum(unlist(str_split(lines, " ")) != "")
+    nlines <- length(lines)
+    list(lines=result$lines + nlines, words=result$words + nwords)
 }
 ```
+
+#### Plots for lines and words
+
+```{r plot_info_function}
+library(ggplot2)
+library(gridExtra)
+
+plot_info <- function(dataset, total) {
+    pl <- plot_total(dataset, total$lines, "Line")
+    pw <- plot_total(dataset, total$words, "Word")
+    grid.arrange(pl, pw, nrow = 1)
+}
+
+```
+
+```{r plot_lines_words, cache=TRUE}
+plot_info(enUsDatasets, read_datasets(enUsDatasets, counter))
+```
+## Creating N-Grams
+
+The n-grams will be used to feed the prediction algorithm in the next stages for known and unknown sequences of words. The basic statistics for 2-gram and 3-gram from the four languages are shown below.
+
+```{r}
+
+
+```
+
