@@ -81,7 +81,7 @@ counter <- function(lines, result) {
 
 #### Plots for lines and words
 
-```{r echo=F}
+```{r echo=F, warning=FALSE, message=FALSE}
 library(ggplot2)
 library(gridExtra)
 ```
@@ -117,8 +117,49 @@ plot_info(dt[,4], read_datasets(dt[,4], counter))
 
 The n-grams will be used to feed the prediction algorithm in the next stages for known and unknown sequences of words. The basic statistics for 2-gram and 3-gram from the four languages are shown below.
 
-```{r}
+```{r fetch_ngrams, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tidytext)
 
-
+fetch_ngrams <- function(lines, result) {
+    tb <- data_frame(txt = lines)
+    df <- tb %>%
+          unnest_tokens(ngram, txt, token = "ngrams", n = result$n) %>%
+          arrange(ngram) %>%
+          group_by(ngram) %>%
+          count
+    if (is.null(result$ngrams)) {
+        result$ngrams <- df
+    } else {
+        merged <- merge(result$ngrams, df, by = "ngram", all = "TRUE")
+        merged[is.na(merged)] <- 0
+        result$ngrams <- merged %>%
+                         select(ngram, n.x, n.y) %>%
+                         mutate(n = n.x + n.y) %>%
+                         select(ngram, n)
+    }
+    result
+}
 ```
 
+```{r}
+create_ngrams <- function(filenames, ngram_type=2) {
+    for (file in filenames) {
+        rdata = paste(file, "RData", sep = ".")
+        if (!file.exists(rdata)) {
+            ngrams <- checkLines(file,
+                                  fetch_ngrams,
+                                  initial_value=list(ngrams=NULL, n=ngram_type),
+                                  nrec=100000)
+            df <- ngrams$ngrams %>%
+                  group_by(ngram) %>%
+                  summarise(n = sum(n)) %>%
+                  arrange(desc(n))
+            save(df, file = rdata)
+        }
+        break
+    }
+}
+
+create_ngrams(dt, 3)
+```
