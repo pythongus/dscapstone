@@ -84,6 +84,7 @@ counter <- function(lines, result) {
 ```{r echo=F, warning=FALSE, message=FALSE}
 library(ggplot2)
 library(gridExtra)
+library(grid)
 ```
 
 ```{r plot_info_function}
@@ -122,12 +123,14 @@ library(tidyverse)
 library(tidytext)
 
 fetch_ngrams <- function(lines, result) {
+    records <- 1000
     tb <- data_frame(txt = lines)
     df <- tb %>%
           unnest_tokens(ngram, txt, token = "ngrams", n = result$n) %>%
-          arrange(ngram) %>%
           group_by(ngram) %>%
-          count
+          count %>%
+          arrange(desc(n)) %>%
+          head(records)
     if (is.null(result$ngrams)) {
         result$ngrams <- df
     } else {
@@ -136,30 +139,63 @@ fetch_ngrams <- function(lines, result) {
         result$ngrams <- merged %>%
                          select(ngram, n.x, n.y) %>%
                          mutate(n = n.x + n.y) %>%
-                         select(ngram, n)
+                         select(ngram, n) %>%
+                         arrange(desc(n)) %>%
+                         head(records)
     }
     result
 }
 ```
 
 ```{r}
-create_ngrams <- function(filenames, ngram_type=2) {
+create_ngrams <- function(filenames, ngram_type=2, nrec=50000) {
     for (file in filenames) {
         rdata = paste(file, "RData", sep = ".")
         if (!file.exists(rdata)) {
             ngrams <- checkLines(file,
-                                  fetch_ngrams,
-                                  initial_value=list(ngrams=NULL, n=ngram_type),
-                                  nrec=100000)
+                                 fetch_ngrams,
+                                 initial_value=list(ngrams=NULL, n=ngram_type),
+                                 nrec=nrec)
             df <- ngrams$ngrams %>%
                   group_by(ngram) %>%
                   summarise(n = sum(n)) %>%
                   arrange(desc(n))
             save(df, file = rdata)
         }
-        break
     }
 }
+```
 
-create_ngrams(dt, 3)
+### Merging The Datasets From The Four Languages 
+```{r dataset_merge}
+library(rlist)
+
+folders <- c("bigrams", "trigrams")
+languages <- c("en", "de", "fi", "ru")
+for (folder in folders) {
+    ngram_files <- list.files(folder)
+    for (language in languages) {
+        files <- grep(paste0("^", language), ngram_files)
+        merged <- NULL
+        for (file in ngram_files[files]) {
+            filename <- paste(folder, file, sep = .Platform$file.sep)
+            load(filename)
+            if (is.null(merged)) {
+                merged <- df
+            } else {
+                merged <- merge(merged, df, by='ngram', all=TRUE)
+                merged[is.na(merged)] <- 0
+                merged <- merged %>%
+                          mutate(n = n.x + n.y) %>%
+                          arrange(desc(n)) %>%
+                          select(ngram, n) %>%
+                          head(1000)
+            }
+        }
+        g <- ggplot(merged, aes(x='ngrams', y=n)) + geom_violin() +
+             ggtitle(paste(folder, language, sep = " | "))
+        print(g)
+        print(summary(merged))
+    }
+}
 ```
