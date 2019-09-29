@@ -4,3 +4,5 @@
 *.zip
 rsconnect/
 final/
+.R*
+*.log
