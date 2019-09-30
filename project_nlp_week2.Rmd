@@ -81,6 +81,7 @@ counter <- function(lines, result) {
 
 #### Plots for lines and words
 
+Some initial information from the datasets can be extracted from the word and line counts from each language.
 ```{r echo=F, warning=FALSE, message=FALSE}
 library(ggplot2)
 library(gridExtra)
@@ -113,10 +114,21 @@ plot_info(dt[,3], read_datasets(dt[,3], counter))
 plot_info(dt[,4], read_datasets(dt[,4], counter))
 ```
 
+### Some Observations
+
+It is interesting to note that Finnish is quite different from the other languages, especially the use of the Twitter channel. Also, English is the language with greatest number of records, which can be taken into consideration when executing the code. Some sort of normalisation might be needed to make all performances similar, which will be discussed in the next section.
 
 ## Creating N-Grams
 
-The n-grams will be used to feed the prediction algorithm in the next stages for known and unknown sequences of words. The basic statistics for 2-gram and 3-gram from the four languages are shown below.
+The n-grams will be used to feed the prediction algorithm in the next stages for known and unknown sequences of words. The basic statistics for 2-gram and 3-gram from the four languages are shown below. The strategy to read the datasets and extract the bigrams and trigrams is as follows:
+
+* Read the next 50,000 records
+* Extract the n-grams from the current set
+* Group and count the occurrences
+* Order in reverse order by the count
+* Return the top 1000 records
+
+The strategy is applicable to all datasets and the the goal is to optmise the reading regarding speed and memory, as well as extraction of meaninful information.
 
 ```{r fetch_ngrams, message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -166,7 +178,11 @@ create_ngrams <- function(filenames, ngram_type=2, nrec=50000) {
 }
 ```
 
-### Merging The Datasets From The Four Languages 
+Once created, the files are stored in two differente directories, `bigrams` and `trigrams`, for later merging and further reduction.
+
+### Merging The Datasets From The Four Languages
+
+The code below will merge the datasets from the three different sources, after being transformed into n-grams datasets.
 ```{r dataset_merge}
 library(rlist)
 
@@ -199,3 +215,12 @@ for (folder in folders) {
     }
 }
 ```
+
+
+## More Observations
+
+The violin plots and the data summary show that the last quartile in all languages holde the most occurrences of each n-gram. This can be used for the final prediction model, to further optimise for speed for known 2-ngrams and 3-ngrams.
+
+## GitHub Repository
+
+[Code and transformed datasources](https://guscastles.github.io/)
