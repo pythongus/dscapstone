@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE, comment="", warning=FALSE)
 
 The capstone project for the Data Science Specialization is a predictive algorithm similar to that developed by SwiftKey, which powers Android smart phones. This algorithm can suggest the next word or words after the user has typed the first one.
 
-This document explains major features of the data identified in the English dataset provided as a input data for the app, and briefly summarizes the plans for creating the prediction algorithm and Shiny app for a technical and non-technical audience. 
+This document explains major features of the data identified in the four language datasets provided as a input data for the app, and briefly summarizes the plans for creating the prediction algorithm and Shiny app for a technical and non-technical audience. 
 
 ### Questions To Consider
 * How can you efficiently store an n-gram model (think Markov Chains)?
@@ -25,7 +25,7 @@ This document explains major features of the data identified in the English data
 
 ## Initial Exploratory Data Analysis (EDA)
 
-The dataset for this initial EDA is the English dataset. For other languages, there is some degree of uncertainty around the fitness of the algorithm without any modification, due to linguistic differences. This should be considered in the future stages of the app. Files included are:
+The datasources for this initial EDA are the English, German, Finnish, and Russian datasets. For other languages, there is some degree of uncertainty around the fitness of the algorithm without any modification, due to linguistic differences. This should be considered in the future stages of the app. Files included are:
 
 English           German            Finnish           Russian 
 ----------------- ----------------- ----------------- ---------------
@@ -34,7 +34,7 @@ en_US.news.txt    de_DE.news.txt    fi_FI.news.txt    ru_RU.news.txt
 en_US.twitter.txt de_DE.twitter.txt fi_FI.twitter.txt ru_RU.twitter.txt
 
 ```{r datasets, echo=F}
-dataFolder <- "final/en_US"
+dataFolder <- "final"
 datasets <- list()
 datasets$languages <- c("en_US", "de_DE", "fi_FI", "ru_RU")
 datasets$sources <- c("blogs", "news", "twitter")
@@ -159,6 +159,8 @@ fetch_ngrams <- function(lines, result) {
 }
 ```
 
+The below code takes care of creating the merged datasets, with the 1000 most frequest n-grams.
+
 ```{r}
 create_ngrams <- function(filenames, ngram_type=2, nrec=50000) {
     for (file in filenames) {
@@ -176,6 +178,20 @@ create_ngrams <- function(filenames, ngram_type=2, nrec=50000) {
         }
     }
 }
+
+create_and_move <- function(dataset, folder, ngram) {
+    if (!dir.exists(folder)) {
+        dir.create(folder)
+        create_ngrams(dataset, ngram_type = ngram)
+        for (file in dataset) {
+            file.copy(from = file, to = folder)
+            file.remove(file)
+        }
+    }
+}
+
+create_and_move(dt, "bigrams", 2)
+create_and_move(dt, "trigrams", 3)
 ```
 
 Once created, the files are stored in two differente directories, `bigrams` and `trigrams`, for later merging and further reduction.
@@ -223,4 +239,4 @@ The violin plots and the data summary show that the last quartile in all languag
 
 ## GitHub Repository
 
-[Code and transformed datasources](https://guscastles.github.io/)
+[Code and transformed datasources](https://github.com/pythongus/dscapstone.git)
