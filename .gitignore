@@ -6,3 +6,4 @@ rsconnect/
 final/
 .R*
 *.log
+**/*.RData
